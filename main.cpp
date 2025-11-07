@@ -7,12 +7,9 @@
 
 #include <webview/webview.h>
 #include <nlohmann/json.hpp>
+#include <battery/embed.hpp>
 
-#define JS_CODE "window.addEventListener('load', event => {" \
-    "   if (document.querySelector('#divCaptcha')) return;"\
-    "   saveHTMLPage(document.documentElement.outerHTML)" \
-    "}, {once: true})" \
-
+static const std::string initialPage = R"(https://buscatextual.cnpq.br/buscatextual/busca.do?metodo=apresentar)";
 static const std::string rootUrl = R"(http://lattes.cnpq.br/)";
 
 namespace fs = std::filesystem;
@@ -37,20 +34,12 @@ int main(int argc, char* argv[])
 {
     static_assert(std::is_standard_layout_v<std::string> == true);
 
-    if (argc == 1)
-    {
-        std::cerr << "Usage: " << argv[0] << " {idLattes}" << std::endl;
-        return -1;
-    }
-
-    const std::string url = rootUrl + argv[1];
-
     webview_t webview = webview_create(true, nullptr);
     webview_set_title(webview, "ParryView");
-    webview_navigate(webview, url.c_str());
+    webview_navigate(webview, initialPage.c_str());
 
-    webview_bind(webview, "saveHTMLPage", SaveHTMLPage, &webview);
-    webview_init(webview, JS_CODE);
+    // webview_bind(webview, "saveHTMLPage", SaveHTMLPage, &webview);
+    webview_init(webview, b::embed<"test.js">().data());
 
     webview_run(webview);
 
