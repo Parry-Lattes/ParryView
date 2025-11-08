@@ -1,22 +1,22 @@
-#include <cstring>
 #include <iostream>
 #include <fstream>
-#include <sstream>
 #include <filesystem>
-#include <type_traits>
 
 #include <webview/webview.h>
 #include <nlohmann/json.hpp>
 #include <battery/embed.hpp>
 
-static const std::string initialPage = R"(https://buscatextual.cnpq.br/buscatextual/busca.do?metodo=apresentar)";
-static const std::string rootUrl = R"(http://lattes.cnpq.br/)";
+static const std::string ROOT_URL = R"(http://lattes.cnpq.br/)";
 
 namespace fs = std::filesystem;
 
+struct GlobalContext
+{
+    webview_t webview = nullptr;
+} context;
+
 void SaveHTMLPage(const char* id, const char* req, void* arg)
 {
-    webview_t& webview = *static_cast<webview_t*>(arg);
     nlohmann::json reqJsonArr = nlohmann::json::parse(req);
 
     std::string html = reqJsonArr[0].get<std::string>();
@@ -26,23 +26,43 @@ void SaveHTMLPage(const char* id, const char* req, void* arg)
     html.erase(std::ranges::remove(html, '\n').begin(), html.end());
 
     std::cout << html << std::endl;
-
-    webview_terminate(webview);
 }
 
-int main(int argc, char* argv[])
+void Shutdown()
 {
-    static_assert(std::is_standard_layout_v<std::string> == true);
+    webview_destroy(context.webview);
+    context.webview = nullptr;
+}
 
-    webview_t webview = webview_create(true, nullptr);
-    webview_set_title(webview, "ParryView");
-    webview_navigate(webview, initialPage.c_str());
+int main(const int argc, char* argv[])
+{
+    if (atexit(Shutdown) != 0)
+    {
+        return EXIT_FAILURE;
+    }
 
-    // webview_bind(webview, "saveHTMLPage", SaveHTMLPage, &webview);
-    webview_init(webview, b::embed<"test.js">().data());
+    if (argc == 1)
+    {
+        std::cerr << "Usage: " << argv[0] << " {IdLattes}" << std::endl;
+        return -1;
+    }
 
-    webview_run(webview);
 
-    webview_destroy(webview);
-    return 0;
+    context.webview = webview_create(
+#ifdef NDEBUG
+    false,
+#else
+    true,
+#endif
+        nullptr
+        );
+    webview_set_title(context.webview, "ParryView");
+    webview_navigate(context.webview, (ROOT_URL + argv[1]).c_str());
+
+    webview_bind(context.webview, "saveHTMLPage", SaveHTMLPage, nullptr);
+    webview_init(context.webview, b::embed<"test.js">().data());
+
+    webview_run(context.webview);
+
+    return EXIT_SUCCESS;
 }
