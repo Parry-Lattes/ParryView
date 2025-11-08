@@ -1,25 +1,22 @@
-#include <cstring>
 #include <iostream>
 #include <fstream>
-#include <sstream>
 #include <filesystem>
-#include <type_traits>
 
 #include <webview/webview.h>
 #include <nlohmann/json.hpp>
+#include <battery/embed.hpp>
 
-#define JS_CODE "window.addEventListener('load', event => {" \
-    "   if (document.querySelector('#divCaptcha')) return;"\
-    "   saveHTMLPage(document.documentElement.outerHTML)" \
-    "}, {once: true})" \
-
-static const std::string rootUrl = R"(http://lattes.cnpq.br/)";
+static const std::string ROOT_URL = R"(http://lattes.cnpq.br/)";
 
 namespace fs = std::filesystem;
 
+struct GlobalContext
+{
+    webview_t webview = nullptr;
+} context;
+
 void SaveHTMLPage(const char* id, const char* req, void* arg)
 {
-    webview_t& webview = *static_cast<webview_t*>(arg);
     nlohmann::json reqJsonArr = nlohmann::json::parse(req);
 
     std::string html = reqJsonArr[0].get<std::string>();
@@ -29,31 +26,43 @@ void SaveHTMLPage(const char* id, const char* req, void* arg)
     html.erase(std::ranges::remove(html, '\n').begin(), html.end());
 
     std::cout << html << std::endl;
-
-    webview_terminate(webview);
 }
 
-int main(int argc, char* argv[])
+void Shutdown()
 {
-    static_assert(std::is_standard_layout_v<std::string> == true);
+    webview_destroy(context.webview);
+    context.webview = nullptr;
+}
+
+int main(const int argc, char* argv[])
+{
+    if (atexit(Shutdown) != 0)
+    {
+        return EXIT_FAILURE;
+    }
 
     if (argc == 1)
     {
-        std::cerr << "Usage: " << argv[0] << " {idLattes}" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " {IdLattes}" << std::endl;
         return -1;
     }
 
-    const std::string url = rootUrl + argv[1];
 
-    webview_t webview = webview_create(true, nullptr);
-    webview_set_title(webview, "ParryView");
-    webview_navigate(webview, url.c_str());
+    context.webview = webview_create(
+#ifdef NDEBUG
+    false,
+#else
+    true,
+#endif
+        nullptr
+        );
+    webview_set_title(context.webview, "ParryView");
+    webview_navigate(context.webview, (ROOT_URL + argv[1]).c_str());
 
-    webview_bind(webview, "saveHTMLPage", SaveHTMLPage, &webview);
-    webview_init(webview, JS_CODE);
+    webview_bind(context.webview, "saveHTMLPage", SaveHTMLPage, nullptr);
+    webview_init(context.webview, b::embed<"test.js">().data());
 
-    webview_run(webview);
+    webview_run(context.webview);
 
-    webview_destroy(webview);
-    return 0;
+    return EXIT_SUCCESS;
 }

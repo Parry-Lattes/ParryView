@@ -6,3 +6,7 @@
 	path = vendor/webview
 	url = https://github.com/webview/webview.git
 	branch = 0.12.0
+[submodule "vendor/embed"]
+	path = vendor/embed
+	url = https://github.com/batterycenter/embed
+	branch = v1.2.19
