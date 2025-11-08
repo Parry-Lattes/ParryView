@@ -32,6 +32,9 @@ jobs:
             c_compiler: cl
             cpp_compiler: cl
           - os: ubuntu-latest
+            c_compiler: gcc
+            cpp_compiler: g++
+          - os: ubuntu-latest
             c_compiler: clang
             cpp_compiler: clang++
         exclude:
@@ -80,7 +83,7 @@ jobs:
       run: ctest --build-config ${{ matrix.build_type }}
       
     - name: Create Github Release
-      if: ${{ github.event_name == "push" }}
+      if: ${{ github.event_name == 'push' }}
       uses: softprops/action-gh-release@v2.4.2
       with:
         files: |
