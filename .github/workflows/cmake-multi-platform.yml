@@ -81,17 +81,3 @@ jobs:
       # Execute tests defined by the CMake configuration. Note that --build-config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: ctest --build-config ${{ matrix.build_type }}
-      
-    - name: Create Github Release
-      if: ${{ github.event_name == 'push' }}
-      uses: softprops/action-gh-release@v2.4.2
-      with:
-        tag_name: 'v0.0.1'
-        files: |
-          ParryView
-          ParryView.exe
-        # Base directory to resolve 'files' globs against (defaults to job working-directory)
-        working_directory: ${{ steps.strings.outputs.build-output-dir }}
-        # Specifies whether this release should be set as the latest release for the repository. Drafts and prereleases cannot be set as latest. Can be `true`, `false`, or `legacy`. Uses GitHub api default if not provided
-        make_latest: true
-              
