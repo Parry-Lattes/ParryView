@@ -9,3 +9,4 @@
 [submodule "vendor/embed"]
 	path = vendor/embed
 	url = https://github.com/batterycenter/embed
+	branch = v1.2.19
